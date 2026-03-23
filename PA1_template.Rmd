@@ -1,0 +1,174 @@
+---
+title: "Getting and cleaning data"
+author: "Sanidhya"
+date: "2026-03-23"
+output: html_document
+---
+
+````markdown
+---
+title: "Reproducible Research Assignment 1"
+author: "Your Name"
+output: html_document
+---
+
+## Loading and preprocessing the data
+
+```{r, echo=TRUE}
+library(dplyr)
+library(lattice)
+
+data <- read.csv("activity.csv")
+data$date <- as.Date(data$date)
+```
+
+---
+
+## What is mean total number of steps taken per day?
+
+```{r, echo=TRUE}
+steps_per_day <- data %>%
+  group_by(date) %>%
+  summarise(total_steps = sum(steps, na.rm = TRUE))
+```
+
+### Histogram
+
+```{r, echo=TRUE}
+hist(steps_per_day$total_steps,
+     main = "Total Steps per Day",
+     xlab = "Steps",
+     col = "blue")
+```
+
+### Mean and Median
+
+```{r, echo=TRUE}
+mean_steps <- mean(steps_per_day$total_steps)
+median_steps <- median(steps_per_day$total_steps)
+
+mean_steps
+median_steps
+```
+
+**Observation:**
+The mean and median represent the average daily steps ignoring missing values.
+
+---
+
+## What is the average daily activity pattern?
+
+```{r, echo=TRUE}
+interval_avg <- data %>%
+  group_by(interval) %>%
+  summarise(avg_steps = mean(steps, na.rm = TRUE))
+```
+
+### Time Series Plot
+
+```{r, echo=TRUE}
+plot(interval_avg$interval, interval_avg$avg_steps,
+     type = "l",
+     xlab = "Interval",
+     ylab = "Average Steps")
+```
+
+### Maximum Interval
+
+```{r, echo=TRUE}
+interval_avg[which.max(interval_avg$avg_steps), ]
+```
+
+**Observation:**
+This interval has the highest average activity.
+
+---
+
+## Imputing missing values
+
+### Total missing values
+
+```{r, echo=TRUE}
+sum(is.na(data$steps))
+```
+
+### Strategy
+
+Missing values are replaced using the **mean of the respective 5-minute interval**.
+
+```{r, echo=TRUE}
+interval_means <- data %>%
+  group_by(interval) %>%
+  summarise(mean_steps = mean(steps, na.rm = TRUE))
+
+data_filled <- data
+
+data_filled$steps[is.na(data_filled$steps)] <-
+  interval_means$mean_steps[
+    match(data_filled$interval[is.na(data_filled$steps)],
+          interval_means$interval)
+  ]
+```
+
+---
+
+## Histogram after imputing missing values
+
+```{r, echo=TRUE}
+steps_per_day_filled <- data_filled %>%
+  group_by(date) %>%
+  summarise(total_steps = sum(steps))
+
+hist(steps_per_day_filled$total_steps,
+     main = "Total Steps per Day (After Imputation)",
+     xlab = "Steps",
+     col = "green")
+```
+
+### Mean and Median after filling
+
+```{r, echo=TRUE}
+mean(steps_per_day_filled$total_steps)
+median(steps_per_day_filled$total_steps)
+```
+
+**Observation:**
+After imputing missing values, the mean increases slightly. Missing data earlier caused underestimation.
+
+---
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+```{r, echo=TRUE}
+data_filled$day_type <- ifelse(
+  weekdays(data_filled$date) %in% c("Saturday", "Sunday"),
+  "weekend",
+  "weekday"
+)
+```
+
+### Average steps by interval and type
+
+```{r, echo=TRUE}
+avg_by_daytype <- data_filled %>%
+  group_by(interval, day_type) %>%
+  summarise(avg_steps = mean(steps))
+```
+
+### Panel Plot
+
+```{r, echo=TRUE}
+xyplot(avg_steps ~ interval | day_type,
+       data = avg_by_daytype,
+       type = "l",
+       layout = c(1,2),
+       xlab = "Interval",
+       ylab = "Average Steps")
+```
+
+**Observation:**
+Weekday activity is more structured, while weekend activity is more spread out.
+
+```
+```
+
